@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+// eslint-disable-next-line import/no-webpack-loader-syntax
 import mapboxgl from 'mapbox-gl';
 import { FaGithub, FaHistory } from "react-icons/fa";
 import MetricsWidget from './components/MetricsWidget';
