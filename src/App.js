@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-// eslint-disable-next-line import/no-webpack-loader-syntax
 import mapboxgl from 'mapbox-gl';
 import { FaGithub, FaHistory } from "react-icons/fa";
 import MetricsWidget from './components/MetricsWidget';
@@ -8,7 +7,7 @@ import MetricsWidget from './components/MetricsWidget';
 const TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
 
 function App() {
-  mapboxgl.accessToken = TOKEN;
+  mapboxgl.accessToken = "pk.eyJ1Ijoic3ZtbmlraGlsIiwiYSI6ImNscjl6a2FoNDA4MWwyam5zMWFyNno5OXUifQ.3xWsTTo62GCXyMKNcaS8kQ";
   const mapContainer = useRef();
 
   const [population, setPopulation] = useState(500000);
