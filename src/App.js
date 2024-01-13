@@ -1,68 +1,87 @@
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import { FaGithub, FaHistory } from "react-icons/fa";
-import MetricsWidget from './components/MetricsWidget';
-
+import mapboxgl, { Control } from 'mapbox-gl';
+import HeaderWidget from './components/HeaderWidget';
+import ControlsWidget from './components/ControlsWidget';
+import circle from '@turf/circle';
 
 const TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
 
 function App() {
   mapboxgl.accessToken = "pk.eyJ1Ijoic3ZtbmlraGlsIiwiYSI6ImNscjl6a2FoNDA4MWwyam5zMWFyNno5OXUifQ.3xWsTTo62GCXyMKNcaS8kQ";
-  const mapContainer = useRef();
+  const mapContainer = useRef(null);
+  const map = useRef(null);
 
-  const [population, setPopulation] = useState(500000);
-  const [income, setIncome] = useState(90000);
+  const [lng, setLng] = useState(-122.4);
+  const [lat, setLat] = useState(37.8);
+  const [radius, setRadius] = useState(4);
+  const [options, setOptions] = useState({steps: 64, units: 'kilometers'});
+  
   useEffect(() => {
-    const map = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v9",
-      center: [-122.4, 37.8],
-      zoom: 12
-    });
-
-    map.on("load", () => {
-
-      map.addSource("neighbourhoods", {
-        type:"geojson",
-        data: ""
+    //check if there exists a map yet...
+    if (!map.current) {
+      // Initialize map
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [lng, lat],
+        zoom: 12
       });
-    });
+  
+      map.current.on("load", () => {
+        map.current.addSource("circle", {
+          type: "geojson",
+          data: circle([lng, lat], radius, options)
+        });
+  
+        map.current.addLayer({
+          'id': 'circle-style',
+          'type': 'fill',
+          'source': 'circle',
+          'layout': {},
+          'paint': {
+            'fill-color': '#a1a1aa',
+            'fill-opacity': 0.35
+          }
+        });
+      });
+    }
 
-    return () => map.remove();
-  },[]);
+    const updateCircle = () => {
+      const currentCenter = map.current.getCenter();
+      const newCircleData = circle([currentCenter.lng.toFixed(4), currentCenter.lat.toFixed(4)], radius, options);
+      if (map.current.getSource('circle')) {
+        map.current.getSource('circle').setData(newCircleData);
+      }
+    }
+
+    // when the map moves, the updateCircle method is called to render a newCircle
+    map.current.on('move', updateCircle);
+    
+    updateCircle();
+
+    // Cleanup function to remove the event listener
+    return () => {
+      if (map.current) {
+        map.current.off('move', updateCircle);
+      }
+    };
+  },[radius, options]);
+
  
   return (
     <div className='flex flex-col h-screen overflow-hidden'>
       {/* Header */}
-      <div className='flex flex-row bg-white text-white py-4 justify-between items-center'>
-        <div className='text-green-500 p-1.5 ml-5 text-lg font-semibold rounded-lg'>
-          Take Home Demo
-        </div>
-        {/*filter and github button */}
-        <div className='flex flex-row mr-5 justify-between'>
-          <button className="p-2 hover:bg-green-200 rounded-md cursor-pointer">
-            <FaHistory className="w-8 h-7 text-green-500"/>
-          </button>
-          <button 
-            className="ml-3 p-2 hover:bg-green-200 rounded-md cursor-pointer" 
-            onClick={() => {window.open('https://github.com/svmnikhil', '_blank')}}>
-            <FaGithub className='w-8 h-7 text-green-500'/>
-          </button>
-        </div>
-      </div>
+      <HeaderWidget />
 
-      {/* Map and metrics widget, slider, and calculate button */}
+      {/* Map and the ControlsWidget */}
       <div className='relative flex-grow justify-center items-center'>
+
         <div ref={mapContainer} className='absolute top-2 right-2 bottom-2 left-2'></div>
 
         <div className='absolute bottom-4 right-4 flex flex-col items-end'>
-          <MetricsWidget population={population} income={income}/>
-          <button 
-            className="bg-green-500 text-white shadow-md font-bold p-2 w-64 rounded-lg mt-3" 
-            onClick={() => {}}>
-            Calculate
-          </button>
+          <ControlsWidget radius={radius} setRadius={setRadius}/>
         </div>
+
       </div>
     </div>
 

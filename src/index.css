@@ -1,3 +1,22 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.slider-thumb::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px; /* Size of the slider thumb */
+    height: 20px;
+    background: #10B981; /* Tailwind bg-green-500 */
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  
+  .slider-thumb::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #10B981; /* Tailwind bg-green-500 */
+    cursor: pointer;
+    border-radius: 50%;
+  }
+  
