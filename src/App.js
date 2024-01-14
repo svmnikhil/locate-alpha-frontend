@@ -1,23 +1,77 @@
+/* eslint-disable no-unused-vars */
 import { useEffect, useRef, useState } from 'react';
-import mapboxgl, { Control } from 'mapbox-gl';
+import mapboxgl from 'mapbox-gl';
 import HeaderWidget from './components/HeaderWidget';
 import ControlsWidget from './components/ControlsWidget';
 import circle from '@turf/circle';
+import rewind from '@turf/rewind';
+import { feature } from '@turf/helpers';
 
 const TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
+const apiUrl = process.env.REACT_APP_API_URL;
+
 
 function App() {
-  mapboxgl.accessToken = "pk.eyJ1Ijoic3ZtbmlraGlsIiwiYSI6ImNscjl6a2FoNDA4MWwyam5zMWFyNno5OXUifQ.3xWsTTo62GCXyMKNcaS8kQ";
+  mapboxgl.accessToken = TOKEN;
   const mapContainer = useRef(null);
   const map = useRef(null);
 
-  const [lng, setLng] = useState(-122.4);
-  const [lat, setLat] = useState(37.8);
+  const [lng, setLng] = useState(-96.454968);
+  const [lat, setLat] = useState(33.332216);
   const [radius, setRadius] = useState(4);
   const [options, setOptions] = useState({steps: 64, units: 'kilometers'});
   
   useEffect(() => {
-    //check if there exists a map yet...
+
+    const fetchNeighbourhoodData = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/api/neighbourhoods`);
+        const neighbourhoodData = await response.json();
+        return neighbourhoodData;
+      } catch (error) {
+        console.error("Error fetching neighbourhood data:", error);
+      }
+    }
+
+    const loadData = async () => {
+      const neighbourhoodData = await fetchNeighbourhoodData(); // Await the data
+      const extractedSpatialObjects = neighbourhoodData.map(item => item.spatialObj);
+      const rewindedSpatialObjects = extractedSpatialObjects.map(item => rewind(item));
+      const featurizedSpatialObjects = rewindedSpatialObjects.map(item => feature(item));
+  
+      map.current.addSource("neighbourhoods", {
+        type: "geojson",
+        data: 
+        {
+          'type': 'FeatureCollection',
+          'features': featurizedSpatialObjects
+          
+        }
+      });
+
+      map.current.addLayer({
+        'id': 'neighbourhood-style',
+        'type': 'fill',
+        'source': 'neighbourhoods',
+        'paint': {
+          'fill-color': '#99f6e4',
+          'fill-opacity': 0.35
+        }
+      });
+
+      map.current.addLayer({
+        'id': 'neighbourhood-outline',
+        'type': 'line',
+        'source': 'neighbourhoods',
+        'layout': {},
+        'paint': {
+        'line-color': '#2dd4bf',
+        'line-width': 1
+        }
+        });
+    };
+
+    //check if there exists a map yet
     if (!map.current) {
       // Initialize map
       map.current = new mapboxgl.Map({
@@ -34,16 +88,20 @@ function App() {
         });
   
         map.current.addLayer({
-          'id': 'circle-style',
+          'id': 'polygon-style',
           'type': 'fill',
           'source': 'circle',
           'layout': {},
           'paint': {
-            'fill-color': '#a1a1aa',
+            'fill-color': '#404040',
             'fill-opacity': 0.35
           }
         });
+        loadData();
       });
+
+      
+    
     }
 
     const updateCircle = () => {
@@ -65,6 +123,7 @@ function App() {
         map.current.off('move', updateCircle);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[radius, options]);
 
  

@@ -2,6 +2,8 @@ import React, {useState} from 'react';
 import "../index";
 import { UserGroupIcon, CashIcon } from '@heroicons/react/solid';
 
+
+
 function ControlsWidget({radius, setRadius}) {
 
   const [population, setPopulation] = useState(500000);
@@ -34,7 +36,7 @@ function ControlsWidget({radius, setRadius}) {
           min='1'
           max="50"
           value={radius}
-          class='w-48 h-2 bg-neutral appearance-none cursor-pointer rounded-lg slider-thumb'
+          className='w-48 h-2 bg-neutral appearance-none cursor-pointer rounded-lg slider-thumb'
           onChange={({target: {value: distance}}) => {
             setRadius(distance);
           }}/>
