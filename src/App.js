@@ -7,12 +7,14 @@ import ControlsWidget from './components/ControlsWidget';
 
 import circle from '@turf/circle';
 import rewind from '@turf/rewind';
-import { feature, featureCollection, point, points, polygon } from '@turf/helpers';
+import { feature, featureCollection, point, multiPoint, polygon, lineString, multiLineString } from '@turf/helpers';
 import centroid from '@turf/centroid';
 import { getGeom } from '@turf/invariant';
 import pointsWithinPolygon from '@turf/points-within-polygon';
 import booleanWithin from '@turf/boolean-within';
-
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
+import polygonize from '@turf/polygonize';
+import distance from '@turf/distance';
 
 const TOKEN = process.env.REACT_APP_MAPBOX_TOKEN;
 const apiUrl = process.env.REACT_APP_API_URL;
@@ -27,6 +29,11 @@ function App() {
   const [lat, setLat] = useState(33.332216);
   const [radius, setRadius] = useState(4);
   const [options, setOptions] = useState({steps: 64, units: 'kilometers'});
+  const [calculateBool, setCalculateBool] = useState(false);
+  const [moddedData, setModifiedData] = useState(null);
+  const [centData, setCentroidData] = useState(null);
+  const [population, setPopulation] = useState(500000);
+  const [income, setIncome] = useState(90000);
 
   useEffect(() => {
     const fetchNeighbourhoodData = async () => {
@@ -43,7 +50,7 @@ function App() {
     const loadData = async () => {
        // extract spatialobject from neighbourhood data
       const neighbourhoodData = await fetchNeighbourhoodData(); 
-      const modifiedData = neighbourhoodData.map((item, index) => {
+      var modifiedData = neighbourhoodData.map((item, index) => {
         const autoIncrementingId = index + 1;
         const rewindedGeometry = rewind(item.spatialObj);
         const featurizedObject = feature(rewindedGeometry);
@@ -57,9 +64,11 @@ function App() {
           id: autoIncrementingId
         }
         return newFeaturizedObject;
-      });
+      }); 
 
-      const centroidData = modifiedData.map(item => {
+      setModifiedData(modifiedData);
+
+      var centroidData = modifiedData.map(item => {
         const centroidObj = centroid(item.geometry);
         const incomeObj = item.properties.income;
         const populationObj = item.properties.population;
@@ -71,6 +80,8 @@ function App() {
         }
         return combinedObject;
       });
+
+      setCentroidData(centroidData);
      
       // console.log(modifiedData);
       // console.log(centroidData);
@@ -126,6 +137,7 @@ function App() {
       //   }
       // });
 
+
       map.current.addSource("centroids", {
         type: "geojson",
         data:
@@ -149,35 +161,8 @@ function App() {
       });
 
       // when the map moves, the updateCircle method is called to render a newCircle and to recalculate the centroids
-      map.current.on('move', () => {
-        updateCircle();
-        let features = map.current.queryRenderedFeatures({layers: ["centroid-layer"]});  
-        // console.log(features);
-
-        let filteredFeatures = features.map(item => {
-          const pt = getGeom(item);
-          return pt.coordinates;
-        });        
-
-        // const pointsFeatureCollection = featureCollection(
-        //   filteredFeatures.map(coordinates => point(coordinates))
-        // );
-
-        // console.log(circle([lng, lat], radius, options).geometry.coordinates);
-        
-        // const circleGeom = circle([lng, lat], radius, options);
-        // console.log(filteredFeatures);
-        // console.log(filteredFeatures.map(item => [item]);
-        // // console.log(polygon(circleGeom))
-        // // console.log(polygon([circleGeom]));
-
-        // const neighbourhoodsInCircle = pointsWithinPolygon(filteredFeatures, polygon(circleGeom));
-
-        // console.log(neighbourhoodsInCircle);
-      });
-      
     };
-  
+    
     //check if there exists a map yet
     if (!map.current) {
       // Initialize map
@@ -204,44 +189,16 @@ function App() {
             'fill-opacity': 0.35
           }
         });
+
         loadData();
       });
     }
-
+    // console.log(moddedData);
     /* This part of the useEffect takes care of all the updates on the map layer */
-
+    
     // Change the cursor to a pointer when the mouse is over the states layer.
     map.current.on('mouseenter', 'neighbourhood-style', () => {
       map.current.getCanvas().style.cursor = 'pointer';
-    });
-
-    // When the user moves their mouse over the neighbourhood, update the feature state for the feature under the mouse.
-    map.current.on('mousemove', 'neighbourhood-style', (e) => {
-      if (e.features.length > 0) {
-        if (hoveredPolygonId !== null) {
-          map.current.setFeatureState(
-          { source: 'neighbourhoods', id: hoveredPolygonId },
-          { hover: false }
-          );
-        }
-        hoveredPolygonId = e.features[0].id;
-        map.current.setFeatureState(
-          { source: 'neighbourhoods', id: hoveredPolygonId },
-          { hover: true }
-        );
-      }
-    });
-
-    // When the mouse leaves the neighbourhood, update the feature state of the previously hovered neighbourhood.
-    map.current.on('mouseleave', 'neighbourhood-style', () => {
-      map.current.getCanvas().style.cursor = '';
-      if (hoveredPolygonId !== null) {
-        map.current.setFeatureState(
-        { source: 'neighbourhoods', id: hoveredPolygonId },
-        { hover: false }
-        );
-      }
-      hoveredPolygonId = null;
     });
 
     const updateCircle = () => {
@@ -252,10 +209,135 @@ function App() {
       }
     }
 
+    const loadNewUpdates = () => {
+      //to see all the rendered centroids in the viewport
+      let features = map.current.queryRenderedFeatures({layers: ["centroid-layer"]});
+      //console.log(features);
+
+      //calculate the centroids within the circle
+      let centroidsToPoints = features.map(item => item.geometry.coordinates); 
+
+      //console.log("centroidToPoints", centroidsToPoints);
+
+      const currentCenter = map.current.getCenter();
+      
+      const pointInCircle = (point1, point2, radius) => {
+        var dist_to_point = distance(point1, point2);
+        return dist_to_point - radius > 0 ? false : true;
+      }      
+      // takes a set of centroid coords
+      // for each it calculates the distance from the center of the screen
+      // if that distance < radius --> pointsInCircle gets appended
+      var pointsInCircle = centroidsToPoints.filter(item => {
+        return pointInCircle(item, [currentCenter.lng.toFixed(4), currentCenter.lat.toFixed(4)], radius);
+      });
+
+      // console.log(pointsInCircle);
+      
+      const existsInCircle = (currentPoint, pointsInCircle) => {
+        // console.log("START A SEARCH FOR ONE DATABASE POINT IN CENTROID ARRAY")
+
+        for (let i = 0; i < pointsInCircle.length; i++) {
+          const element = pointsInCircle[i];
+          // console.log("centroidPoint_x:", element[0].toFixed(3), "centroidPoint_y:", element[1].toFixed(3));
+          // console.log("dbPoint_x:", currentPoint[0].toFixed(3), "dbPoint_y:", currentPoint[1].toFixed(3));
+          
+          const found = element[0].toFixed(3) === currentPoint[0].toFixed(3) && element[1].toFixed(3) === currentPoint[1].toFixed(3);
+          // console.log("found data:", found);
+  
+          if (found) {
+              return true;
+          }
+        }
+        return false;
+      }
+      
+      var centroidDataInCircle = centData.map(item => {
+        var currentPoint = item.centroid.geometry.coordinates;
+        
+        // console.log("current value from the whole dataset: ", currentPoint[0].toFixed(4), currentPoint[1].toFixed(4));
+        if (existsInCircle(currentPoint, pointsInCircle)) {
+          return item;
+        } else {
+
+        }
+      });
+      
+      centroidDataInCircle = centroidDataInCircle.filter(function( element ) {
+        return element !== undefined;
+     });
+
+     console.log(centroidDataInCircle);
+
+     //calculate average income and average population from this set
+
+     var incomeData = centroidDataInCircle.map(item => item.income);
+     var populationData = centroidDataInCircle.map(item => item.population);
+    //  console.log(typeof(incomeData));
+    //  console.log(Object.values(incomeData));
+
+     function calculateAverage(array) {
+      // Check if the input is an array
+      if (!Array.isArray(array)) {
+        throw new TypeError('Input is not an array');
+      }
+    
+      // Check if the array is empty
+      if (array.length === 0) {
+        return 0; // or throw an error, depending on your requirements
+      }
+    
+      const sum = array.reduce((acc, curr) => acc + curr, 0);
+      const average = sum / array.length;
+      return average;
+    }
+
+    setIncome(calculateAverage(Object.values(incomeData)).toFixed(2));
+    setPopulation(calculateAverage(Object.values(populationData)).toFixed(1));
+  }
+
     // when the map moves, the updateCircle method is called to render a newCircle
-    map.current.on('move', updateCircle);
+    map.current.on('move', () => {
+      updateCircle();
+
+    });
+
+    if (calculateBool) {
+      loadNewUpdates();
+      setCalculateBool(prev => !prev);
+      // console.log("load data has been called", calculateBool);
+    }
 
     updateCircle();
+
+    // When the user moves their mouse over the neighbourhood, update the feature state for the feature under the mouse.
+    // map.current.on('mousemove', 'neighbourhood-style', (e) => {
+    //   if (e.features.length > 0) {
+    //     if (hoveredPolygonId !== null) {
+    //       map.current.setFeatureState(
+    //       { source: 'neighbourhoods', id: hoveredPolygonId },
+    //       { hover: false }
+    //       );
+    //     }
+    //     hoveredPolygonId = e.features[0].id;
+    //     map.current.setFeatureState(
+    //       { source: 'neighbourhoods', id: hoveredPolygonId },
+    //       { hover: true }
+    //     );
+    //   }
+    // });
+
+    // When the mouse leaves the neighbourhood, update the feature state of the previously hovered neighbourhood.
+    // map.current.on('mouseleave', 'neighbourhood-style', () => {
+    //   map.current.getCanvas().style.cursor = '';
+    //   if (hoveredPolygonId !== null) {
+    //     map.current.setFeatureState(
+    //     { source: 'neighbourhoods', id: hoveredPolygonId },
+    //     { hover: false }
+    //     );
+    //   }
+    //   hoveredPolygonId = null;
+    // });
 
     // Cleanup function to remove the event listener
     return () => {
@@ -264,7 +346,7 @@ function App() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[radius, options]);
+  },[radius, options, calculateBool]);
 
  
   return (
@@ -278,9 +360,8 @@ function App() {
         <div ref={mapContainer} className='absolute top-2 right-2 bottom-2 left-2'></div>
 
         <div className='absolute bottom-4 right-4 flex flex-col items-end'>
-          <ControlsWidget radius={radius} setRadius={setRadius}/>
+          <ControlsWidget radius={radius} setRadius={setRadius} setCalculateBool={setCalculateBool} income={income} population={population}/>
         </div>
-
       </div>
     </div>
 

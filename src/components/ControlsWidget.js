@@ -4,10 +4,13 @@ import { UserGroupIcon, CashIcon } from '@heroicons/react/solid';
 
 
 
-function ControlsWidget({radius, setRadius}) {
+function ControlsWidget({radius, setRadius, setCalculateBool, income, population}) {
 
-  const [population, setPopulation] = useState(500000);
-  const [income, setIncome] = useState(90000);
+
+  const handleClick = () => {
+    console.log("handle click called");
+    setCalculateBool(true); // This will toggle the state in the parent component
+  };
 
   return (
     <div>
@@ -44,7 +47,7 @@ function ControlsWidget({radius, setRadius}) {
 
       <button 
         className="bg-green-500 text-white shadow-md font-bold p-2 w-64 rounded-lg" 
-        onClick={() => {}}>
+        onClick={handleClick}>
         Calculate
       </button>
     </div>
