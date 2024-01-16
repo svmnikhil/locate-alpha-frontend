@@ -211,18 +211,18 @@ function App() {
 
     const loadNewUpdates = () => {
       //to see all the rendered centroids in the viewport
-      let features = map.current.queryRenderedFeatures({layers: ["centroid-layer"]});
+      const features = map.current.queryRenderedFeatures({layers: ["centroid-layer"]});
       //console.log(features);
 
       //calculate the centroids within the circle
-      let centroidsToPoints = features.map(item => item.geometry.coordinates); 
+      const centroidsToPoints = features.map(item => item.geometry.coordinates); 
 
       //console.log("centroidToPoints", centroidsToPoints);
 
       const currentCenter = map.current.getCenter();
       
       const pointInCircle = (point1, point2, radius) => {
-        var dist_to_point = distance(point1, point2);
+        const dist_to_point = distance(point1, point2);
         return dist_to_point - radius > 0 ? false : true;
       }      
       // takes a set of centroid coords
@@ -292,8 +292,22 @@ function App() {
       return average;
     }
 
+    function calculateSum(array) {
+      // Check if the input is an array
+      if (!Array.isArray(array)) {
+        throw new TypeError('Input is not an array');
+      }
+    
+      // Check if the array is empty
+      if (array.length === 0) {
+        return 0; // or throw an error, depending on your requirements
+      }
+      const sum = array.reduce((acc, curr) => acc + curr, 0);
+      return sum;
+    }
+
     setIncome(calculateAverage(Object.values(incomeData)).toFixed(2));
-    setPopulation(calculateAverage(Object.values(populationData)).toFixed(1));
+    setPopulation(calculateSum(Object.values(populationData)).toFixed(0));
   }
 
     // when the map moves, the updateCircle method is called to render a newCircle

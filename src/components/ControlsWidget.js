@@ -16,17 +16,17 @@ function ControlsWidget({radius, setRadius, setCalculateBool, income, population
     <div>
       <div className='bg-white w-64 shadow-md rounded-lg'>
         <div className='flex flex-row justify-between bg-neutral-200 p-2 rounded-t-lg'>
-          <div className='flex flex-row items-center font-bold'>
+          <div className='flex flex-row items-center font-bold text-sm'>
             <UserGroupIcon className='w-4 h-4 text-black mr-1'/>
-            population 
+            Total Population 
           </div>
           <div className='ml-4'>{population}</div>
         </div>
       
         <div className='flex flex-row justify-between p-2'>
-          <div className='flex flex-row items-center font-bold'>
+          <div className='flex flex-row items-center font-bold text-sm'>
             <CashIcon className='w-4 h-4 text-black mr-1'/>
-            income
+            Average Income
           </div>
           <div className='ml-4'>{income}</div>
         </div>

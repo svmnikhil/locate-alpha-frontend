@@ -1,5 +1,5 @@
 import React from "react";
-import { FaGithub, FaHistory } from "react-icons/fa";
+import { FaGithub } from "react-icons/fa";
 
 
 function HeaderWidget() {
@@ -10,9 +10,6 @@ function HeaderWidget() {
         </div>
         {/*history and github button */}
         <div className='flex flex-row mr-5 justify-between'>
-          <button className="p-2 hover:bg-green-200 rounded-md cursor-pointer">
-            <FaHistory className="w-8 h-8 text-green-500"/>
-          </button>
           <button 
             className="ml-3 p-2 hover:bg-green-200 rounded-md cursor-pointer" 
             onClick={() => {window.open('https://github.com/svmnikhil', '_blank')}}>
