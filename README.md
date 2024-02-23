@@ -1,4 +1,5 @@
 # Technical Documentation for the Take Home Demo Project
+![new_new](https://github.com/svmnikhil/locate-alpha-frontend/assets/43412606/0bb7a599-c4a6-408d-8275-7f60a4e14a49)
 
 ## Problem Statement:
 
